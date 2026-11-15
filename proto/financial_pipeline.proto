@@ -1,0 +1,128 @@
+syntax = "proto3";
+
+package financial_pipeline;
+
+// Side represents the trade execution direction.
+enum Side {
+    SIDE_UNSPECIFIED = 0;
+    BUY = 1;
+    SELL = 2;
+}
+
+// TransferStatus reflects the outcome of a stream processing pipeline.
+enum TransferStatus {
+    STATUS_UNKNOWN = 0;
+    STATUS_SUCCESS = 1;
+    STATUS_CHECKSUM_ERROR = 2;
+    STATUS_SEQUENCE_GAP = 3;
+    STATUS_INVALID_DATA = 4;
+    STATUS_INTERNAL_ERROR = 5;
+    STATUS_CANCELLED = 6;
+}
+
+// CompressionType allows adaptive wire compression.
+enum CompressionType {
+    COMPRESSION_NONE = 0;
+    COMPRESSION_ZLIB = 1;
+}
+
+// TradeRecord represents an individual financial transaction event.
+message TradeRecord {
+    uint64 trade_id = 1;
+    uint64 sequence_number = 2;
+    string symbol = 3;
+    double price = 4;
+    double quantity = 5;
+    Side side = 6;
+    uint64 timestamp_ns = 7;
+    string venue = 8;
+    string order_id = 9;
+    uint32 execution_flags = 10;
+}
+
+// TradeBatch contains an in-memory collection of trades.
+message TradeBatch {
+    repeated TradeRecord records = 1;
+}
+
+// FinancialDataChunk encapsulates a streaming block for M2M transmission.
+// Designed to keep memory footprint O(1) during >5GB data transfers.
+message FinancialDataChunk {
+    string session_id = 1;
+    uint64 chunk_index = 2;
+    uint32 record_count = 3;
+    bytes payload = 4;
+    uint32 chunk_checksum = 5;
+    bool is_last_chunk = 6;
+    CompressionType compression = 7;
+    uint64 sent_at_ns = 8;
+    bool request_ack = 9;
+}
+
+// StreamAck provides sliding-window flow control / backpressure acknowledgment.
+message StreamAck {
+    string session_id = 1;
+    uint64 acknowledged_chunk_index = 2;
+    uint64 records_received_so_far = 3;
+    uint64 bytes_received_so_far = 4;
+    bool can_continue = 5;
+    string status_message = 6;
+}
+
+// StreamSummary is returned upon completing a data transfer stream.
+message StreamSummary {
+    string session_id = 1;
+    TransferStatus status = 2;
+    uint64 total_chunks = 3;
+    uint64 total_records = 4;
+    uint64 total_bytes = 5;
+    uint32 composite_checksum = 6;
+    double duration_ms = 7;
+    double throughput_mb_per_sec = 8;
+    double records_per_sec = 9;
+    string error_message = 10;
+}
+
+// SessionQuery requests status of a transfer session.
+message SessionQuery {
+    string session_id = 1;
+}
+
+// SessionStatusResponse reports the current state of a transfer session.
+message SessionStatusResponse {
+    string session_id = 1;
+    TransferStatus status = 2;
+    uint64 chunks_processed = 3;
+    uint64 records_processed = 4;
+    uint64 bytes_processed = 5;
+    bool is_active = 6;
+    double elapsed_seconds = 7;
+}
+
+// HealthCheckRequest for service readiness.
+message HealthCheckRequest {
+    string client_id = 1;
+}
+
+// HealthCheckResponse reports service readiness and capacity.
+message HealthCheckResponse {
+    bool healthy = 1;
+    string version = 2;
+    uint64 uptime_seconds = 3;
+    uint32 active_sessions = 4;
+}
+
+// FinancialDataPipeline service definition for high-throughput M2M communication.
+service FinancialDataPipeline {
+    // Unidirectional client-streaming RPC: client streams >5GB chunks, server responds with summary.
+    rpc StreamFinancialData (stream FinancialDataChunk) returns (StreamSummary);
+
+    // Bidirectional streaming RPC: client streams chunks, server sends back periodic flow-control acks.
+    rpc StreamWithFlowControl (stream FinancialDataChunk) returns (stream StreamAck);
+
+    // Query status of any in-progress or completed session.
+    rpc QuerySessionStatus (SessionQuery) returns (SessionStatusResponse);
+
+    // Health check for M2M orchestration.
+    rpc HealthCheck (HealthCheckRequest) returns (HealthCheckResponse);
+}

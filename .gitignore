@@ -1,0 +1,27 @@
+# Build artifacts
+build/
+bin/
+lib/
+*.obj
+*.exe
+*.pdb
+*.ilk
+*.lib
+*.exp
+
+# Conan cache & generated files
+conan.lock
+CMakeUserPresets.json
+
+# IDE / Editor files
+.vscode/
+.vs/
+*.sln
+*.vcxproj
+*.user
+.idea/
+
+# OS files
+Thumbs.db
+Desktop.ini
+.DS_Store
