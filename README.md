@@ -320,4 +320,4 @@ Small note: If editing the Readme, please conform to the [standard-readme](https
 
 ## License
 
-[MIT](LICENSE) © 2026 Financial Pipeline Contributors
+[MIT](LICENSE) © 2026 chryote
