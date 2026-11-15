@@ -5,8 +5,12 @@
 [![gRPC](https://img.shields.io/badge/gRPC-v1.67.1-orange.svg?style=flat-square)](https://grpc.io/)
 [![Build Status](https://img.shields.io/badge/tests-19%2F19%20passed-brightgreen.svg?style=flat-square)]()
 [![Throughput](https://img.shields.io/badge/throughput-1.16%20Gbps%20%7C%202.18M%20rec%2Fs-success.svg?style=flat-square)]()
+[![Linux](https://img.shields.io/badge/OS-Linux-FCC624.svg?style=flat-square&logo=linux&logoColor=black)]()
+[![macOS](https://img.shields.io/badge/OS-macOS-000000.svg?style=flat-square&logo=apple&logoColor=white)]()
+[![Windows](https://img.shields.io/badge/OS-Windows-0078D6.svg?style=flat-square&logo=windows&logoColor=white)]()
+[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg?style=flat-square&logo=docker&logoColor=white)]()
 
-High-throughput, memory-bounded C++ gRPC M2M pipeline API designed to stream >5 GB of financial tick and trade transaction data between distributed servers.
+High-throughput, memory-bounded C++ gRPC M2M pipeline API designed to stream >5 GB of financial tick and trade transaction data between distributed servers across Linux, macOS, and Windows.
 
 The **financial-pipeline-grpc** engine implements a high-performance, asynchronous, and memory-bounded machine-to-machine (M2M) streaming architecture. Built with Modern C++17, Protocol Buffers, and gRPC, it achieves >1.16 Gbps wire throughput (>2.18 million trade records/sec) while strictly constraining memory utilization to $O(1)$ (<30 MB RSS). The system enforces end-to-end auditability and bit-exact data integrity via per-chunk CRC32C hashing, composite rolling hashes, sequence continuity checks, and bidirectional sliding-window flow control.
 
@@ -39,33 +43,116 @@ Financial institutions, high-frequency market makers, and quantitative risk engi
 
 ## Install
 
+The pipeline supports native installation across **Linux**, **macOS**, and **Windows**, as well as containerized deployment via **Docker**.
+
 ### Prerequisites
-- **C++ Compiler**: MSVC (Visual Studio 2022/2026) or GCC 11+ / Clang 14+ with C++17 support.
+- **Compiler**:
+  - **Linux**: GCC 11+ or Clang 14+ with C++17 support.
+  - **macOS**: Apple Clang (Xcode 14+) with C++17 support (Intel & Apple Silicon M1-M4).
+  - **Windows**: MSVC v143/v145 (Visual Studio 2022/2026).
 - **Build System**: [CMake](https://cmake.org/) (>= 3.22) and [Ninja](https://ninja-build.org/).
-- **Package Manager**: [Conan 2.x](https://conan.io/) (installed via `pip install conan`).
+- **Package Manager**: [Conan 2.x](https://conan.io/) (`pip install conan`) OR system package manager (APT/Homebrew).
 
-### Building from Source
+---
 
-1. **Clone the repository**:
-   ```bash
-   git clone https://github.com/organization/financial-pipeline-grpc.git
-   cd financial-pipeline-grpc
-   ```
+### Option A: Linux Installation (Ubuntu, Debian, Fedora, Arch)
 
-2. **Install dependencies via Conan**:
-   ```bash
-   conan install . --output-folder=build -s compiler.version=194 -s compiler.cppstd=14 -s build_type=Release
-   ```
+#### 1. Automated Script
+Run the automated installation, build, and test script:
+```bash
+chmod +x scripts/setup_linux.sh
+./scripts/setup_linux.sh
+```
 
-3. **Configure the project with CMake & Ninja**:
-   ```bash
-   cmake -S . -B build -G "Ninja" -DCMAKE_TOOLCHAIN_FILE=build/conan_toolchain.cmake -DCMAKE_BUILD_TYPE=Release
-   ```
+#### 2. Manual Conan Build (Recommended)
+```bash
+# Install Conan & Ninja via pip
+pip install --upgrade conan ninja
 
-4. **Compile all libraries, executables, and tests**:
-   ```bash
-   cmake --build build --config Release
-   ```
+# Detect host compiler profile
+conan profile detect --force
+
+# Install dependencies (gRPC, Protobuf, GTest)
+conan install . --output-folder=build -s build_type=Release --build=missing
+
+# Configure and compile with CMake & Ninja
+cmake -S . -B build -G "Ninja" -DCMAKE_TOOLCHAIN_FILE=build/conan_toolchain.cmake -DCMAKE_BUILD_TYPE=Release
+cmake --build build -j$(nproc)
+```
+
+#### 3. Native APT / DNF Packages (Alternative)
+On Ubuntu / Debian:
+```bash
+sudo apt-get update && sudo apt-get install -y \
+    build-essential cmake ninja-build pkg-config \
+    libgrpc++-dev libprotobuf-dev protobuf-compiler protobuf-compiler-grpc libgtest-dev
+
+cmake -S . -B build -G "Ninja" -DCMAKE_BUILD_TYPE=Release
+cmake --build build -j$(nproc)
+```
+
+---
+
+### Option B: macOS Installation (Apple Silicon M1-M4 & Intel)
+
+#### 1. Automated Script
+Run the automated macOS setup script:
+```bash
+chmod +x scripts/setup_macos.sh
+./scripts/setup_macos.sh
+```
+
+#### 2. Using Homebrew (Recommended for macOS)
+```bash
+# Install toolchain and dependencies via Homebrew
+brew install cmake ninja grpc protobuf googletest pkg-config
+
+# Export prefix path for Homebrew packages (supports both /opt/homebrew and /usr/local)
+BREW_PREFIX="$(brew --prefix)"
+export CMAKE_PREFIX_PATH="${BREW_PREFIX}:${BREW_PREFIX}/opt/grpc:${BREW_PREFIX}/opt/protobuf:${BREW_PREFIX}/opt/googletest"
+
+# Configure and compile
+cmake -S . -B build -G "Ninja" -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="${CMAKE_PREFIX_PATH}"
+cmake --build build -j$(sysctl -n hw.ncpu)
+```
+
+#### 3. Using Conan on macOS
+```bash
+pip install --upgrade conan ninja
+conan profile detect --force
+conan install . --output-folder=build -s build_type=Release --build=missing
+cmake -S . -B build -G "Ninja" -DCMAKE_TOOLCHAIN_FILE=build/conan_toolchain.cmake -DCMAKE_BUILD_TYPE=Release
+cmake --build build -j$(sysctl -n hw.ncpu)
+```
+
+---
+
+### Option C: Windows Installation (MSVC & Ninja)
+
+```powershell
+# 1. Install Conan via pip
+pip install conan
+
+# 2. Install prebuilt dependencies via Conan
+conan install . --output-folder=build -s compiler.version=194 -s compiler.cppstd=14 -s build_type=Release
+
+# 3. Configure and compile using Developer Command Prompt (x64)
+cmake -S . -B build -G "Ninja" -DCMAKE_TOOLCHAIN_FILE=build/conan_toolchain.cmake -DCMAKE_BUILD_TYPE=Release
+cmake --build build --config Release
+```
+
+---
+
+### Option D: Docker (Instant Test on Any OS)
+
+Build and run the entire pipeline inside a self-contained container:
+```bash
+# Build the Docker image (runs all 19 unit & integration tests during build)
+docker build -t financial-pipeline .
+
+# Run the standalone M2M server container
+docker run --rm -p 50051:50051 financial-pipeline
+```
 
 ---
 
@@ -74,9 +161,16 @@ Financial institutions, high-frequency market makers, and quantitative risk engi
 ### 1. Running the M2M Server
 
 Start the standalone receiving server node (defaults to port `50051` with 32 MB max message threshold):
-```bash
-./build/financial_pipeline_server --port 50051 --max_msg_mb 32
-```
+
+- **Linux / macOS**:
+  ```bash
+  ./build/financial_pipeline_server --port 50051 --max_msg_mb 32
+  ```
+
+- **Windows**:
+  ```powershell
+  .\build\financial_pipeline_server.exe --port 50051 --max_msg_mb 32
+  ```
 
 ### 2. Running the M2M Client
 
@@ -92,34 +186,49 @@ Stream financial data to the server node:
   ./build/financial_pipeline_client --host 127.0.0.1 --port 50051 --gb 2.0 --flow_control
   ```
 
-- **Stream a specific number of trade records**:
+- **Stream a specific count of trade transactions**:
   ```bash
   ./build/financial_pipeline_client --records 10000000
   ```
 
 ### 3. Running Unit and Integration Tests
 
-The test suite runs 19 automated tests covering unit hashing, domain validation, wire mapping, session state transitions, sequence gaps, checksum corruption, and end-to-end streaming:
-```bash
-./build/financial_pipeline_tests
-```
+Execute the 19 automated tests covering unit hashing, domain validation, wire mapping, session state transitions, sequence gaps, checksum corruption, and live gRPC streaming:
+
+- **Linux / macOS**:
+  ```bash
+  ./build/financial_pipeline_tests
+  ```
+
+- **Windows**:
+  ```powershell
+  .\build\financial_pipeline_tests.exe
+  ```
+
+- **Via CTest (All Platforms)**:
+  ```bash
+  ctest --test-dir build --output-on-failure
+  ```
 
 ### 4. Running the Benchmark Suite
 
-Execute the dedicated benchmarking suite testing checksum speed, batch serialization throughput, and end-to-end M2M streaming:
-```bash
-# Quick 1 GB benchmark run
-./build/financial_pipeline_benchmark --gb 1.0
+Execute the dedicated benchmarking suite testing raw checksum speed, batch serialization throughput, and end-to-end M2M streaming:
 
-# Full-scale >5 GB benchmark run
-./build/financial_pipeline_benchmark --gb 5.0
-```
+- **Quick 1.0 GB benchmark**:
+  ```bash
+  ./build/financial_pipeline_benchmark --gb 1.0
+  ```
+
+- **Full-scale >5.0 GB benchmark**:
+  ```bash
+  ./build/financial_pipeline_benchmark --gb 5.0
+  ```
 
 ---
 
 ## API
 
-Complete documentation is available in [`docs/API.md`](docs/API.md).
+Complete API technical documentation is available in [`docs/API.md`](docs/API.md).
 
 ### gRPC Service Definition (`proto/financial_pipeline.proto`)
 
@@ -180,7 +289,7 @@ Regardless of whether 1 GB, 5 GB, or 100 GB is transferred:
 
 ## Benchmarks
 
-Measured on a Windows x86_64 host (MSVC Release build) during a **5.0 GB** streaming run:
+Measured on an x86_64 host (MSVC Release build) during a **5.0 GB** streaming run:
 
 | Metric | Result |
 |---|---|
@@ -202,8 +311,8 @@ Measured on a Windows x86_64 host (MSVC Release build) during a **5.0 GB** strea
 PRs accepted. Please adhere to the following sustainable development practices:
 1. Ensure all new code follows C++17 RAII principles with smart pointers and `const`-correctness.
 2. Avoid god classes: keep classes focused on a single responsibility.
-3. Run `build/financial_pipeline_tests` to verify that all 19 unit and integration tests pass before submitting changes.
-4. Keep the documentation in `docs/API.md` and `README.md` up to date.
+3. Verify that changes build and pass all 19 tests across Linux, macOS, and Windows via GitHub Actions CI (`.github/workflows/ci.yml`).
+4. Keep the documentation in `docs/API.md`, `docs/ARCHITECTURE.md`, and `README.md` up to date.
 
 Small note: If editing the Readme, please conform to the [standard-readme](https://github.com/RichardLitt/standard-readme) specification.
 

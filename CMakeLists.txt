@@ -5,11 +5,19 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+# macOS Homebrew search path support (Apple Silicon & Intel)
+if(APPLE)
+    list(APPEND CMAKE_PREFIX_PATH "/opt/homebrew" "/usr/local")
+endif()
+
+# Threading support across POSIX and Windows
+find_package(Threads REQUIRED)
+
 # Include directories
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/generated)
 
-# Dependencies provided by Conan
+# Dependencies (provided by Conan or system package managers)
 find_package(gRPC REQUIRED)
 find_package(Protobuf REQUIRED)
 find_package(GTest REQUIRED)
@@ -25,7 +33,7 @@ set(PROTO_HDRS "${PROTO_GEN_DIR}/financial_pipeline.pb.h")
 set(GRPC_SRCS "${PROTO_GEN_DIR}/financial_pipeline.grpc.pb.cc")
 set(GRPC_HDRS "${PROTO_GEN_DIR}/financial_pipeline.grpc.pb.h")
 
-# Determine protoc and grpc plugin paths
+# Determine protoc and grpc plugin paths across platforms
 if(TARGET protobuf::protoc)
     set(PROTOC_EXEC $<TARGET_FILE:protobuf::protoc>)
 else()
@@ -93,10 +101,14 @@ target_link_libraries(financial_pipeline_core PUBLIC
     financial_pipeline_proto
     gRPC::grpc++
     protobuf::libprotobuf
+    Threads::Threads
 )
 
+# Platform-specific system libraries
 if(WIN32)
     target_link_libraries(financial_pipeline_core PUBLIC psapi)
+elseif(UNIX AND NOT APPLE)
+    target_link_libraries(financial_pipeline_core PUBLIC dl)
 endif()
 
 # Server Application
