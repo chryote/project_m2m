@@ -45,7 +45,7 @@ jobs:
       - name: Linux - Install dependencies via Conan
         if: runner.os == 'Linux'
         run: |
-          conan install . --output-folder=build -s build_type=${{ matrix.build_type }} --build=missing
+          conan install . --output-folder=build -s build_type=${{ matrix.build_type }} --build=missing -c tools.cmake.cmaketoolchain:generator=Ninja
 
       # --- macOS specific setup ---
       - name: macOS - Install dependencies via Homebrew
@@ -57,7 +57,7 @@ jobs:
       - name: Windows - Install dependencies via Conan
         if: runner.os == 'Windows'
         run: |
-          conan install . --output-folder=build -s compiler.version=194 -s compiler.cppstd=14 -s build_type=${{ matrix.build_type }} --build=missing
+          conan install . --output-folder=build -s compiler.version=194 -s compiler.cppstd=14 -s build_type=${{ matrix.build_type }} --build=missing -c tools.cmake.cmaketoolchain:generator=Ninja
 
       # --- Build & Test on Linux & Windows (Conan Toolchain) ---
       - name: Configure CMake (Conan Toolchain)
