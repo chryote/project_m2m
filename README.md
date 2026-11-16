@@ -14,6 +14,10 @@ High-throughput, memory-bounded C++ gRPC M2M pipeline API designed to stream >5 
 
 The **financial-pipeline-grpc** engine implements a high-performance, asynchronous, and memory-bounded machine-to-machine (M2M) streaming architecture. Built with Modern C++17, Protocol Buffers, and gRPC, it achieves >1.16 Gbps wire throughput (>2.18 million trade records/sec) while strictly constraining memory utilization to $O(1)$ (<30 MB RSS). The system enforces end-to-end auditability and bit-exact data integrity via per-chunk CRC32C hashing, composite rolling hashes, sequence continuity checks, and bidirectional sliding-window flow control.
 
+<p align="center">
+  <img src="docs/assets/pipeline_demo.gif" alt="Financial Pipeline Execution Demo" width="850" />
+</p>
+
 ---
 
 ## Table of Contents
